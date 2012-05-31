@@ -22,6 +22,10 @@ int ndsfuse_getattr(const char *path, struct stat *stbuf)
 	node = tree_find_node(ndsfile->filetree, path);
 	if(node == NULL) return -ENOENT;
 	stbuf->st_nlink = 1; //FIXME: this is wrong, see FUSE FAQ Why doesn't find work on my filesystem?
+	stbuf->st_mtime = ndsfile->mtime;
+	stbuf->st_ctime = ndsfile->mtime;
+	stbuf->st_atime = ndsfile->mtime;
+
 	if(node->type == NODE_TYPE_DIR)
 	{
 		stbuf->st_mode = S_IFDIR | PERMISSION_RXRXRX;

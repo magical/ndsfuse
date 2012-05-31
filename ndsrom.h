@@ -80,6 +80,8 @@ typedef struct
 	uint32_t *fat;
 	uint32_t fatsize;
 	int fd;
+
+	time_t mtime;
 } nds_file;
 
 extern nds_file *nds_do_magic(const char *file);	//can leave unfreed objects on error

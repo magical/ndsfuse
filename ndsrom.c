@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -113,12 +114,19 @@ nds_file *nds_do_magic(const char *file)
 	nds_header header;
 	char *tmp;
 	nds_file *ret;
+	struct stat stat;
 	
 	fd = open(file, O_RDONLY);
 	if(fd < 0) return NULL;
-	
+
+	if (fstat(fd, &stat) < 0) {
+		return NULL;
+	}
+
 	ret = (nds_file *)(malloc(sizeof(nds_file)));
 	if(ret == NULL) return NULL;
+
+	ret->mtime = stat.st_mtime;
 
 	root = (tree_node *)(malloc(sizeof(tree_node)));
 	if(root == NULL) return NULL;
