@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <fcntl.h>
 
 #define FUSE_USE_VERSION 26
@@ -109,8 +110,7 @@ static int ndsfuse_read(const char *path, char *buf, size_t size, off_t offset, 
 			size = len - offset;
 		if(node->type == NODE_TYPE_FILE_FAT)
 		{
-			fseek(ndsfile->f, ndsfile->fat[node->id*2]+offset, SEEK_SET);
-			size = fread(buf, 1, size, ndsfile->f);	//fixme: debug this possibly
+			size = pread(ndsfile->fd, buf, size, ndsfile->fat[node->id*2]+offset);	//fixme: debug this possibly
 		}
 		else if(node->type == NODE_TYPE_FILE_VIRT)
 		{

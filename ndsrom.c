@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "ndsrom.h"
 #include "tree.h"
@@ -50,14 +52,14 @@ static int nds_do_fnt_entry(nds_fnt_main_table_entry *entry, uint8_t *fnt, tree_
 	return 1;
 }
 
-static tree_node *nds_prepare_virtual_file(FILE *f, uint32_t offset, uint32_t size, const char *name)
+static tree_node *nds_prepare_virtual_file(int fd, uint32_t offset, uint32_t size, const char *name)
 {
 	char *tmp;
 	tree_node *tmpnode;
 	tmp = (char *)(malloc(size));
 	if(tmp == NULL) return NULL;
-	if(fseek(f, offset, SEEK_SET) != 0) return NULL;
-	if(fread(tmp,size,1,f) != 1) return NULL;
+	if(lseek(fd, offset, SEEK_SET) < 0) return NULL;
+	if(read(fd, tmp, size) != size) return NULL;
 	tmpnode = (tree_node *)(malloc(sizeof(tree_node)));
 	if(tmpnode == NULL) return NULL;
 	memset(tmpnode->name, 0, sizeof(tmpnode->name));
@@ -70,7 +72,7 @@ static tree_node *nds_prepare_virtual_file(FILE *f, uint32_t offset, uint32_t si
 	return tmpnode;
 }
 
-static tree_node *nds_do_overlay(FILE *f, uint32_t offset, uint32_t size, const char *name)
+static tree_node *nds_do_overlay(int fd, uint32_t offset, uint32_t size, const char *name)
 {
 	char *tmp;
 	nds_overlay_entry *overlay;
@@ -85,8 +87,8 @@ static tree_node *nds_do_overlay(FILE *f, uint32_t offset, uint32_t size, const 
 	tmpnode->next = NULL;
 	tmp = (char *)(malloc(size));
 	if(tmp == NULL) return NULL;
-	if(fseek(f, offset, SEEK_SET) != 0) return NULL;
-	if(fread(tmp, size, 1, f) != 1) return NULL;
+	if(lseek(fd, offset, SEEK_SET) < 0) return NULL;
+	if(read(fd, tmp, size) != size) return NULL;
 	overlay = (nds_overlay_entry *)(tmp);
 	while(overlay < (nds_overlay_entry *)(tmp + size))
 	{
@@ -107,13 +109,13 @@ static tree_node *nds_do_overlay(FILE *f, uint32_t offset, uint32_t size, const 
 nds_file *nds_do_magic(const char *file)
 {
 	tree_node *root, *tmpnode;
-	FILE *f;
+	int fd;
 	nds_header header;
 	char *tmp;
 	nds_file *ret;
 	
-	f = fopen(file,"rb");
-	if(f == NULL) return NULL;
+	fd = open(file, O_RDONLY);
+	if(fd < 0) return NULL;
 	
 	ret = (nds_file *)(malloc(sizeof(nds_file)));
 	if(ret == NULL) return NULL;
@@ -125,30 +127,30 @@ nds_file *nds_do_magic(const char *file)
 	root->children = NULL;
 	root->next = NULL;
 	ret->filetree = root;
-	ret->f = f;
+	ret->fd = fd;
 
-	if(fread(&header,sizeof(header),1,f) != 1) return NULL;
+	if(read(fd, &header, sizeof(header)) != sizeof(header)) return NULL;
 
 	//make header.bin
-	tmpnode = nds_prepare_virtual_file(f, /*beginning of file*/0, header.headersize, "header.bin");
+	tmpnode = nds_prepare_virtual_file(fd, /*beginning of file*/0, header.headersize, "header.bin");
 	if(tmpnode == NULL) return NULL;
 	if(!tree_add_node(root, "/", tmpnode)) return NULL;
 
 	//make arm9.bin
-	tmpnode = nds_prepare_virtual_file(f, header.arm9rom, header.arm9size, "arm9.bin");
+	tmpnode = nds_prepare_virtual_file(fd, header.arm9rom, header.arm9size, "arm9.bin");
 	if(tmpnode == NULL) return NULL;
 	if(!tree_add_node(root, "/", tmpnode)) return NULL;
 
 	//make arm7.bin
-	tmpnode = nds_prepare_virtual_file(f, header.arm7rom, header.arm7size, "arm7.bin");
+	tmpnode = nds_prepare_virtual_file(fd, header.arm7rom, header.arm7size, "arm7.bin");
 	if(tmpnode == NULL) return NULL;
 	if(!tree_add_node(root, "/", tmpnode)) return NULL;
 
 	//read fat
 	tmp = (char *)(malloc(header.fatsize));
 	if(tmp == NULL) return NULL;
-	if(fseek(f, header.fatoffset, SEEK_SET) != 0) return NULL;
-	if(fread(tmp, header.fatsize, 1, f) != 1) return NULL;
+	if(lseek(fd, header.fatoffset, SEEK_SET) < 0) return NULL;
+	if(read(fd, tmp, header.fatsize) != header.fatsize) return NULL;
 	ret->fat = (uint32_t *)(tmp);
 	ret->fatsize = header.fatsize;
 
@@ -164,21 +166,21 @@ nds_file *nds_do_magic(const char *file)
 	if(!tree_add_node(root, "/", tmpnode)) return NULL;
 	tmp = (char *)(malloc(header.fntsize));
 	if(tmp == NULL) return NULL;
-	if(fseek(f, header.fntoffset, SEEK_SET) != 0) return NULL;
-	if(fread(tmp, header.fntsize, 1, f) != 1) return NULL;
+	if(lseek(fd, header.fntoffset, SEEK_SET) < 0) return NULL;
+	if(read(fd, tmp, header.fntsize) != header.fntsize) return NULL;
 	if(nds_do_fnt_entry((nds_fnt_main_table_entry *)(tmp), (uint8_t *)tmp, tmpnode) != 1) return NULL;
 	free(tmp);
 	
 	if(header.arm9overlayoffset)
 	{
-		tmpnode = nds_do_overlay(f, header.arm9overlayoffset, header.arm9overlaysize, "overlay9");
+		tmpnode = nds_do_overlay(fd, header.arm9overlayoffset, header.arm9overlaysize, "overlay9");
 		if(tmpnode == NULL) return NULL;
 		if(!tree_add_node(root, "/", tmpnode)) return NULL;
 	}
 
 	if(header.arm7overlayoffset)
 	{
-		tmpnode = nds_do_overlay(f, header.arm7overlayoffset, header.arm7overlaysize, "overlay7");
+		tmpnode = nds_do_overlay(fd, header.arm7overlayoffset, header.arm7overlaysize, "overlay7");
 		if(tmpnode == NULL) return NULL;
 		if(!tree_add_node(root, "/", tmpnode)) return NULL;
 	}
@@ -188,7 +190,7 @@ nds_file *nds_do_magic(const char *file)
 
 void free_nds_file(nds_file *file)
 {
-	fclose(file->f);
+	close(file->fd);
 	free_entire_tree(file->filetree);
 	free(file->fat);
 	free(file);

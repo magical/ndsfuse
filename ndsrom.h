@@ -79,7 +79,7 @@ typedef struct
 	tree_node *filetree;
 	uint32_t *fat;
 	uint32_t fatsize;
-	FILE *f;
+	int fd;
 } nds_file;
 
 extern nds_file *nds_do_magic(const char *file);	//can leave unfreed objects on error
