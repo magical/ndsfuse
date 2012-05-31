@@ -114,7 +114,7 @@ static int ndsfuse_read(const char *path, char *buf, size_t size, off_t offset, 
 		}
 		else if(node->type == NODE_TYPE_FILE_VIRT)
 		{
-			memcpy(buf, node->virtFileData, size);
+			memcpy(buf, node->virtFileData+offset, size);
 		}
 	}
 	else size = 0;
