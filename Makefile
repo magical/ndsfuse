@@ -18,3 +18,9 @@ ndsfuse.o: ndsfuse.c ndsrom.h tree.h
 
 clean:
 	rm -rf treetest ndstest ndsfuse *.o
+
+install:
+	cp ndsfuse /usr/local/bin
+
+uninstall:
+	rm /usr/local/bin/ndsfuse
