@@ -20,7 +20,7 @@ clean:
 	rm -rf treetest ndstest ndsfuse *.o
 
 install:
-	cp ndsfuse ndstest treetest -t /usr/local/bin
+	cp ndsfuse /usr/local/bin
 
 uninstall:
-	rm /usr/local/bin/ndsfuse /usr/local/bin/ndstest /usr/local/bin/treetest
+	rm /usr/local/bin/ndsfuse

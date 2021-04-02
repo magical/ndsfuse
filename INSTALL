@@ -1,0 +1,10 @@
+== Installation Instructions ==
+
+// Build
+make
+
+// Install
+make install
+
+// Uninstall
+make uninstall
