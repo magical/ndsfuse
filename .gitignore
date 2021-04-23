@@ -17,3 +17,6 @@
 # Executables
 *.exe
 *.out
+
+# GZip Archives
+ndsfuse.1.gz
