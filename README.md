@@ -2,9 +2,14 @@
 A tool to mount NDS ROMs using FUSE.
 
 ## Install
-```
+```sh
 $ make
-# sudo make install
+$ make install
+```
+
+## Uninstall
+```sh
+$ make uninstall
 ```
 
 ## Usage

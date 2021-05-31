@@ -1,7 +1,7 @@
 .PHONY:	all clean
 
 CC = gcc
-CFLAGS = -Wall -g -D_FILE_OFFSET_BITS=64
+CFLAGS = -Wall -g -D_FILE_OFFSET_BITS=64 -Iinclude
 
 all:	treetest ndstest ndsfuse man
 
